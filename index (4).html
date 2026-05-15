@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HepatoGuide — Liver Guidelines Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#22272e;
+    --border:#30363d;--border2:#3d444d;
+    --text:#e6edf3;--text2:#8b949e;--text3:#656d76;
+    --accent:#58a6ff;--accent-dim:#1f3a5f;
+    --green:#3fb950;--green-dim:#0f2d1a;
+    --amber:#d29922;--amber-dim:#2d1f00;
+    --red:#f85149;--red-dim:#2d0f0f;
+    --teal:#39d0c3;--teal-dim:#0a2926;
+    --r:8px;--rl:12px;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Instrument Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden}
+
+  #sidebar{width:280px;min-width:280px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .sidebar-header{padding:20px 20px 16px;border-bottom:1px solid var(--border)}
+  .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#1f3a5f,#0a2926);border:1px solid var(--border2);border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .logo-text{font-family:'DM Serif Display',serif;font-size:18px;color:var(--text);letter-spacing:-.3px}
+  .logo-sub{font-size:11px;color:var(--text3);letter-spacing:.05em;text-transform:uppercase;margin-left:42px}
+
+  .api-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+  .section-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+  .api-input-row{display:flex;gap:6px;align-items:center}
+  input[type=password],input[type=text]{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:7px 10px;outline:none;transition:border-color .15s}
+  input:focus{border-color:var(--teal)}
+  .btn-sm{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--r);color:var(--text2);font-family:'Instrument Sans',sans-serif;font-size:11px;font-weight:500;padding:6px 10px;cursor:pointer;white-space:nowrap;transition:all .15s}
+  .btn-sm:hover{background:var(--bg3);color:var(--text);border-color:var(--teal)}
+  .api-status{margin-top:6px;font-size:11px;display:flex;align-items:center;gap:5px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--text3)}
+  .dot.ok{background:var(--green)}.dot.err{background:var(--red)}
+
+  .docs-section{padding:16px 20px;flex:1;overflow:hidden;display:flex;flex-direction:column}
+  .upload-zone{border:1.5px dashed var(--border2);border-radius:var(--rl);padding:16px;text-align:center;cursor:pointer;transition:all .2s;background:var(--bg3);margin-bottom:12px;flex-shrink:0}
+  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--teal);background:var(--teal-dim)}
+  .upload-zone input{display:none}
+  .upload-icon{font-size:24px;margin-bottom:6px}
+  .upload-title{font-size:12px;font-weight:600;color:var(--text2);margin-bottom:2px}
+  .upload-sub{font-size:11px;color:var(--text3)}
+  .docs-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+  .doc-item{display:flex;align-items:center;gap:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:8px 10px;font-size:12px;transition:all .15s}
+  .doc-item.active{border-color:var(--teal);background:var(--teal-dim)}
+  .doc-icon{font-size:14px;flex-shrink:0}
+  .doc-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2)}
+  .doc-item.active .doc-name{color:var(--teal)}
+  .doc-size{font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0}
+  .doc-remove{width:18px;height:18px;border-radius:4px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+  .doc-remove:hover{background:var(--red-dim);color:var(--red)}
+  .processing-badge{font-size:10px;font-family:'DM Mono',monospace;color:var(--amber);background:var(--amber-dim);border-radius:4px;padding:2px 6px;flex-shrink:0}
+  .context-info{padding:10px 20px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+  .context-bar{height:3px;background:var(--bg4);border-radius:2px;margin-top:6px;overflow:hidden}
+  .context-fill{height:100%;background:var(--teal);border-radius:2px;transition:width .4s}
+
+  #main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+  .chat-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;background:var(--bg2)}
+  .chat-header-text h2{font-family:'DM Serif Display',serif;font-size:16px;font-weight:400;color:var(--text)}
+  .chat-header-text p{font-size:12px;color:var(--text3);margin-top:1px}
+  .mode-indicator{margin-left:auto;display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--text3)}
+  .mode-indicator .dot{width:7px;height:7px}
+  .mode-indicator.grounded{color:var(--teal);border-color:var(--teal-dim);background:var(--teal-dim)}
+  .mode-indicator.grounded .dot{background:var(--teal)}
+
+  #chat-messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px;scroll-behavior:smooth}
+  .message{display:flex;gap:14px;max-width:820px;animation:fadeIn .2s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .message.user{align-self:flex-end;flex-direction:row-reverse}
+  .msg-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0;margin-top:2px}
+  .msg-avatar.bot{background:var(--teal-dim);border:1px solid var(--teal);color:var(--teal);font-family:'DM Serif Display',serif;font-size:14px}
+  .msg-avatar.user-av{background:var(--accent-dim);border:1px solid var(--accent);color:var(--accent)}
+  .msg-body{flex:1}
+  .msg-role{font-size:11px;color:var(--text3);margin-bottom:5px;font-family:'DM Mono',monospace}
+  .message.user .msg-role{text-align:right}
+  .msg-content{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px 16px;font-size:14px;line-height:1.7;color:var(--text)}
+  .message.user .msg-content{background:var(--accent-dim);border-color:#1f3a5f;border-radius:var(--rl) 4px var(--rl) var(--rl)}
+  .message:not(.user) .msg-content{border-radius:4px var(--rl) var(--rl) var(--rl)}
+  .msg-content p{margin-bottom:10px}.msg-content p:last-child{margin-bottom:0}
+  .msg-content strong{color:var(--teal);font-weight:600}
+  .msg-content em{color:var(--text2)}
+  .msg-content code{font-family:'DM Mono',monospace;font-size:12px;background:var(--bg4);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--amber)}
+  .msg-content ul,.msg-content ol{padding-left:20px;margin-bottom:10px}
+  .msg-content li{margin-bottom:4px}
+  .msg-content h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:15px;color:var(--teal);margin-bottom:8px;margin-top:14px}
+  .msg-content blockquote{border-left:3px solid var(--teal);padding-left:12px;margin:10px 0;color:var(--text2);font-style:italic}
+  .source-tag{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:'DM Mono',monospace;color:var(--teal);background:var(--teal-dim);border:1px solid var(--teal);border-radius:4px;padding:2px 7px;margin:6px 4px 0 0}
+  .citations-block{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+  .citations-label{font-size:10px;font-family:'DM Mono',monospace;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+
+  .empty-state{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;gap:12px}
+  .empty-title{font-family:'DM Serif Display',serif;font-size:28px;color:var(--text2);font-style:italic}
+  .empty-sub{font-size:14px;color:var(--text3);max-width:380px;line-height:1.6}
+  .suggestion-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:520px;margin-top:8px}
+  .suggestion{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:12px 14px;font-size:12px;color:var(--text2);cursor:pointer;text-align:left;line-height:1.5;transition:all .15s}
+  .suggestion:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-dim)}
+  .suggestion span{display:block;font-size:11px;color:var(--text3);margin-top:2px;font-style:italic}
+
+  .chat-input-area{padding:16px 24px 20px;border-top:1px solid var(--border);background:var(--bg2)}
+  .input-wrapper{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--rl);display:flex;align-items:flex-end;gap:8px;padding:10px 12px;transition:border-color .15s}
+  .input-wrapper:focus-within{border-color:var(--teal)}
+  #user-input{flex:1;background:none;border:none;color:var(--text);font-family:'Instrument Sans',sans-serif;font-size:14px;line-height:1.6;outline:none;resize:none;max-height:180px;min-height:24px;overflow-y:auto}
+  #user-input::placeholder{color:var(--text3)}
+  .send-btn{width:34px;height:34px;background:var(--teal);border:none;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;color:#0d1117}
+  .send-btn:hover{background:#4de8d9;transform:scale(1.05)}
+  .send-btn:disabled{background:var(--bg4);color:var(--text3);cursor:not-allowed;transform:none}
+  .send-btn svg{width:16px;height:16px}
+  .input-footer{margin-top:8px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text3)}
+  .input-footer kbd{font-family:'DM Mono',monospace;background:var(--bg4);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-size:10px}
+
+  .typing-indicator{display:flex;gap:4px;align-items:center;padding:12px 0 4px}
+  .typing-indicator span{width:6px;height:6px;background:var(--teal);border-radius:50%;animation:bounce 1.4s infinite ease-in-out}
+  .typing-indicator span:nth-child(2){animation-delay:.2s}
+  .typing-indicator span:nth-child(3){animation-delay:.4s}
+  @keyframes bounce{0%,80%,100%{transform:translateY(0);opacity:.4}40%{transform:translateY(-5px);opacity:1}}
+
+  .warning-banner{padding:8px 24px;background:var(--amber-dim);border-bottom:1px solid var(--amber);font-size:12px;color:var(--amber);display:flex;align-items:center;gap:8px}
+  .warning-banner.hidden{display:none}
+  .clear-btn{background:none;border:1px solid var(--border);border-radius:var(--r);color:var(--text3);font-family:'Instrument Sans',sans-serif;font-size:11px;padding:4px 10px;cursor:pointer;margin-left:8px;transition:all .15s}
+  .clear-btn:hover{color:var(--red);border-color:var(--red);background:var(--red-dim)}
+
+  ::-webkit-scrollbar{width:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+  .modal-overlay.hidden{display:none}
+  .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--rl);padding:28px;max-width:440px;width:90%}
+  .modal h3{font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:10px;font-weight:400}
+  .modal p{font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:12px}
+  .modal ol{font-size:13px;color:var(--text2);line-height:1.9;padding-left:20px;margin-bottom:16px}
+  .modal a{color:var(--teal)}
+  .modal input[type=password]{width:100%;margin-bottom:8px}
+  .free-badge{display:inline-block;background:var(--green-dim);color:var(--green);border:1px solid var(--green);border-radius:4px;font-size:11px;font-family:'DM Mono',monospace;padding:2px 8px;margin-bottom:14px}
+  .btn-primary{width:100%;background:var(--teal);color:#0d1117;border:none;border-radius:var(--r);padding:10px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+  .btn-primary:hover{background:#4de8d9}
+
+  @media(max-width:700px){#sidebar{display:none}.suggestion-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<aside id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <div class="logo-icon">🫀</div>
+      <span class="logo-text">HepatoGuide</span>
+    </div>
+    <div class="logo-sub">Liver Guidelines AI</div>
+  </div>
+
+  <div class="api-section">
+    <div class="section-label">Gemini API Key <span style="color:var(--green);font-size:10px;font-family:'DM Mono',monospace;margin-left:4px">FREE</span></div>
+    <div class="api-input-row">
+      <input type="password" id="api-key-input" placeholder="AIza..." autocomplete="off">
+      <button class="btn-sm" onclick="saveApiKey()">Save</button>
+    </div>
+    <div class="api-status">
+      <div class="dot" id="api-dot"></div>
+      <span id="api-status-text">Not configured</span>
+    </div>
+  </div>
+
+  <div class="docs-section">
+    <div class="section-label">Loaded Guidelines</div>
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <input type="file" id="file-input" multiple accept=".pdf,.txt,.md,.docx" onchange="handleFiles(event)">
+      <div class="upload-icon">📄</div>
+      <div class="upload-title">Drop files here</div>
+      <div class="upload-sub">PDF · TXT · MD · DOCX</div>
+    </div>
+    <div class="docs-list" id="docs-list">
+      <div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0;">No guidelines loaded yet.<br>Upload PDFs to begin.</div>
+    </div>
+  </div>
+
+  <div class="context-info">
+    <div id="context-text">0 chars · 0 guidelines</div>
+    <div class="context-bar"><div class="context-fill" id="context-fill" style="width:0%"></div></div>
+  </div>
+</aside>
+
+<main id="main">
+  <div class="chat-header">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="flex-shrink:0">
+      <circle cx="10" cy="10" r="9" stroke="#39d0c3" stroke-width="1.5"/>
+      <path d="M6 10c0-2.2 1.8-4 4-4s4 1.8 4 4-1.8 4-4 4" stroke="#39d0c3" stroke-width="1.5" stroke-linecap="round"/>
+      <circle cx="10" cy="10" r="1.5" fill="#39d0c3"/>
+    </svg>
+    <div class="chat-header-text">
+      <h2>Liver Guidelines Assistant</h2>
+      <p>Gemini 2.0 Flash · Free · Answers only from your uploaded guidelines</p>
+    </div>
+    <div class="mode-indicator" id="mode-indicator">
+      <div class="dot" id="mode-dot"></div>
+      <span id="mode-text">No guidelines</span>
+    </div>
+    <button class="clear-btn" onclick="clearChat()">Clear chat</button>
+  </div>
+
+  <div id="warning-banner" class="warning-banner hidden">
+    ⚠️ <span id="warning-text"></span>
+  </div>
+
+  <div id="chat-messages">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-title">Ask anything about liver disease</div>
+      <div class="empty-sub">Upload guideline PDFs on the left, then ask clinical questions. Answers come strictly from your documents — no hallucination.</div>
+      <div class="suggestion-grid">
+        <button class="suggestion" onclick="useSuggestion(this)">What are the AASLD criteria for TIPS in cirrhosis?<span>Start with a guideline question</span></button>
+        <button class="suggestion" onclick="useSuggestion(this)">Summarise the treatment algorithm for HBV reactivation<span>Clinical summary</span></button>
+        <button class="suggestion" onclick="useSuggestion(this)">What are Child-Pugh scoring parameters and their clinical use?<span>Scoring system</span></button>
+        <button class="suggestion" onclick="useSuggestion(this)">Compare EASL vs AASLD on primary prophylaxis for varices<span>Guideline comparison</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-area">
+    <div class="input-wrapper">
+      <textarea id="user-input" placeholder="Ask a clinical question about liver disease…" rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send (Ctrl+Enter)">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="2" y1="8" x2="14" y2="8"/><polyline points="10,4 14,8 10,12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-footer">
+      <span><kbd>Ctrl</kbd>+<kbd>Enter</kbd> to send</span>
+      <span style="margin-left:auto">Answers drawn only from uploaded guidelines</span>
+    </div>
+  </div>
+</main>
+
+<div class="modal-overlay" id="api-modal">
+  <div class="modal">
+    <h3>Get your free Gemini API key</h3>
+    <div class="free-badge">✓ 100% FREE — no credit card needed</div>
+    <p>This app uses Google's Gemini 2.0 Flash with a free tier of 1,500 requests/day — more than enough for personal study.</p>
+    <ol>
+      <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank">aistudio.google.com/apikey</a></li>
+      <li>Sign in with your Google account</li>
+      <li>Click <strong style="color:var(--text)">"Create API key"</strong></li>
+      <li>Copy the key (starts with <code style="color:var(--amber);background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:'DM Mono',monospace">AIza</code>)</li>
+      <li>Paste it below and click Save</li>
+    </ol>
+    <input type="password" id="modal-api-input" placeholder="AIzaSy...">
+    <button class="btn-primary" onclick="saveApiKeyFromModal()">Save key &amp; start</button>
+  </div>
+</div>
+
+<script type="module">
+const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+
+// ── PDF extraction ──
+async function extractPdfText(file) {
+  const { getDocument, GlobalWorkerOptions } = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs');
+  GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.worker.min.mjs';
+  const buf = await file.arrayBuffer();
+  const pdf = await getDocument({ data: buf }).promise;
+  let out = `[PDF: ${file.name} — ${pdf.numPages} pages]\n`;
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const pg = await pdf.getPage(i);
+    const ct = await pg.getTextContent();
+    out += `\n[Page ${i}] ` + ct.items.map(x => x.str).join(' ');
+  }
+  return out;
+}
+
+// ── DOCX extraction ──
+async function extractDocxText(file) {
+  try {
+    const m = await import('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.esm.js');
+    const buf = await file.arrayBuffer();
+    const r = await m.default.extractRawText({ arrayBuffer: buf });
+    return r.value;
+  } catch { return '[DOCX extraction failed — try saving as PDF]'; }
+}
+
+// ── State ──
+let docs = [], history = [], loading = false;
+
+const getKey = () => localStorage.getItem('hg_gemini') || '';
+
+window.saveApiKey = () => {
+  const k = document.getElementById('api-key-input').value.trim();
+  if (!k) return;
+  localStorage.setItem('hg_gemini', k);
+  document.getElementById('api-key-input').value = k.slice(0,8)+'…';
+  setKeyStatus(true);
+};
+window.saveApiKeyFromModal = () => {
+  const k = document.getElementById('modal-api-input').value.trim();
+  if (!k) return;
+  localStorage.setItem('hg_gemini', k);
+  document.getElementById('api-key-input').value = k.slice(0,8)+'…';
+  document.getElementById('api-modal').classList.add('hidden');
+  setKeyStatus(true);
+};
+function setKeyStatus(ok) {
+  document.getElementById('api-dot').className = 'dot '+(ok?'ok':'err');
+  document.getElementById('api-status-text').textContent = ok ? 'Key saved · free tier' : 'Not configured';
+}
+
+// ── Drag/drop ──
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); if (e.dataTransfer.files.length) processFiles(e.dataTransfer.files); });
+window.handleFiles = e => processFiles(e.target.files);
+
+async function processFiles(files) { for (const f of files) await processOne(f); }
+
+async function processOne(file) {
+  const id = Date.now() + Math.random();
+  const doc = { id, name: file.name, size: fmtBytes(file.size), text: null, charCount: 0, processing: true, error: false };
+  docs.push(doc);
+  renderDocs();
+  try {
+    const ext = file.name.split('.').pop().toLowerCase();
+    let raw = ext === 'pdf' ? await extractPdfText(file)
+            : (ext === 'docx' || ext === 'doc') ? await extractDocxText(file)
+            : await file.text();
+    doc.text = `\n\n===== GUIDELINE: ${file.name} =====\n${raw}\n===== END: ${file.name} =====`;
+    doc.charCount = raw.length;
+  } catch(e) { doc.text = `[Error: ${e.message}]`; doc.error = true; }
+  doc.processing = false;
+  renderDocs(); updateCtx(); updateMode();
+}
+
+window.removeDoc = id => { docs = docs.filter(d => String(d.id) !== String(id)); renderDocs(); updateCtx(); updateMode(); };
+
+function renderDocs() {
+  const el = document.getElementById('docs-list');
+  if (!docs.length) { el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:20px 0;">No guidelines loaded yet.<br>Upload PDFs to begin.</div>'; return; }
+  el.innerHTML = docs.map(d => `
+    <div class="doc-item ${!d.processing&&!d.error?'active':''}">
+      <span class="doc-icon">${d.error?'⚠️':d.processing?'⏳':'📋'}</span>
+      <span class="doc-name" title="${esc(d.name)}">${esc(d.name)}</span>
+      ${d.processing ? '<span class="processing-badge">reading…</span>' : `<span class="doc-size">${d.charCount?Math.round(d.charCount/1000)+'k':d.size}</span>`}
+      <button class="doc-remove" onclick="removeDoc('${d.id}')">×</button>
+    </div>`).join('');
+}
+
+function updateCtx() {
+  const tot = docs.reduce((s,d) => s+(d.charCount||0), 0);
+  const pct = Math.min(100, Math.round(tot/4000000*100));
+  const ready = docs.filter(d=>!d.processing&&!d.error).length;
+  document.getElementById('context-text').textContent = `${Math.round(tot/1000)}k chars · ${ready} guideline${ready!==1?'s':''}`;
+  document.getElementById('context-fill').style.width = pct+'%';
+}
+
+function updateMode() {
+  const ready = docs.filter(d=>d.text&&!d.processing&&!d.error);
+  const ind = document.getElementById('mode-indicator');
+  document.getElementById('mode-text').textContent = ready.length ? `${ready.length} guideline${ready.length>1?'s':''} active` : 'No guidelines';
+  ind.className = 'mode-indicator'+(ready.length?' grounded':'');
+}
+
+// ── System instruction ──
+function sysInstruction() {
+  const ready = docs.filter(d=>d.text&&!d.processing&&!d.error);
+  if (!ready.length) return 'You are HepatoGuide. No guideline documents are loaded. Tell the user to upload PDFs using the sidebar. Do not answer clinical questions from your own knowledge.';
+  return `You are HepatoGuide, a specialist liver disease guidelines assistant for a hepatologist or gastroenterologist.
+
+CRITICAL RULES — follow without exception:
+1. Answer ONLY from the guideline documents provided below. Do not use your own training knowledge.
+2. If something is not in the documents, say: "This topic is not covered in the loaded guidelines." Never guess or fabricate.
+3. Always cite the source document. Format: [Source: document name]
+4. Use precise clinical language. Do not oversimplify.
+5. If guidelines disagree with each other, highlight the difference explicitly.
+6. Reproduce recommendations faithfully — do not soften or reinterpret them.
+7. Structure answers with headings and bullets when helpful.
+
+ANSWER FORMAT:
+- Direct answer first
+- Supporting guideline detail
+- Citation at end: [Source: Document Name, section/page if identifiable]
+
+===== LOADED GUIDELINE DOCUMENTS =====
+${ready.map(d=>d.text).join('\n\n')}
+===== END OF DOCUMENTS =====`;
+}
+
+// ── Chat ──
+window.clearChat = () => {
+  history = [];
+  const c = document.getElementById('chat-messages');
+  c.innerHTML = '';
+  const es = document.createElement('div');
+  es.className='empty-state'; es.id='empty-state';
+  es.innerHTML=`<div class="empty-title">Ask anything about liver disease</div>
+    <div class="empty-sub">Upload guideline PDFs on the left, then ask clinical questions.</div>
+    <div class="suggestion-grid">
+      <button class="suggestion" onclick="useSuggestion(this)">What are the AASLD criteria for TIPS in cirrhosis?<span>Start with a guideline question</span></button>
+      <button class="suggestion" onclick="useSuggestion(this)">Summarise the treatment algorithm for HBV reactivation<span>Clinical summary</span></button>
+      <button class="suggestion" onclick="useSuggestion(this)">What are Child-Pugh scoring parameters and their clinical use?<span>Scoring system</span></button>
+      <button class="suggestion" onclick="useSuggestion(this)">Compare EASL vs AASLD on primary prophylaxis for varices<span>Guideline comparison</span></button>
+    </div>`;
+  c.appendChild(es);
+};
+
+window.useSuggestion = btn => {
+  document.getElementById('user-input').value = btn.childNodes[0].textContent.trim();
+  sendMessage();
+};
+window.handleKey = e => { if ((e.ctrlKey||e.metaKey)&&e.key==='Enter') { e.preventDefault(); sendMessage(); } };
+window.autoResize = el => { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,180)+'px'; };
+
+window.sendMessage = async () => {
+  const inp = document.getElementById('user-input');
+  const text = inp.value.trim();
+  if (!text || loading) return;
+  const key = getKey();
+  if (!key) { document.getElementById('api-modal').classList.remove('hidden'); return; }
+
+  document.getElementById('empty-state')?.remove();
+  addMsg('user', text);
+  history.push({ role:'user', parts:[{text}] });
+  inp.value=''; inp.style.height='auto';
+  loading=true; document.getElementById('send-btn').disabled=true;
+  const typing = addTyping();
+
+  try {
+    const res = await fetch(`${GEMINI_URL}?key=${key}`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        system_instruction:{ parts:[{text:sysInstruction()}] },
+        contents: history,
+        generationConfig:{ temperature:0.2, maxOutputTokens:2048, topP:0.8 },
+        safetySettings:[
+          {category:'HARM_CATEGORY_HARASSMENT',threshold:'BLOCK_NONE'},
+          {category:'HARM_CATEGORY_HATE_SPEECH',threshold:'BLOCK_NONE'},
+          {category:'HARM_CATEGORY_SEXUALLY_EXPLICIT',threshold:'BLOCK_NONE'},
+          {category:'HARM_CATEGORY_DANGEROUS_CONTENT',threshold:'BLOCK_NONE'}
+        ]
+      })
+    });
+    typing.remove();
+    if (!res.ok) {
+      const err = await res.json().catch(()=>({}));
+      const msg = err.error?.message || `API error ${res.status}`;
+      if (res.status===400) { showWarn('Invalid API key — please re-enter it in the sidebar.'); localStorage.removeItem('hg_gemini'); setKeyStatus(false); }
+      else if (res.status===429) showWarn('Rate limit hit. Wait a moment and try again (free tier: 15 req/min).');
+      else showWarn(msg);
+      history.pop(); return;
+    }
+    const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || '(empty response)';
+    history.push({ role:'model', parts:[{text:reply}] });
+    addMsg('assistant', reply);
+  } catch(e) {
+    typing.remove(); showWarn('Network error: '+e.message); history.pop();
+  } finally {
+    loading=false; document.getElementById('send-btn').disabled=false;
+  }
+};
+
+function addMsg(role, text) {
+  const c = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className=`message ${role==='user'?'user':''}`;
+  el.innerHTML=`<div class="msg-avatar ${role==='user'?'user-av':'bot'}">${role==='user'?'You':'H'}</div>
+    <div class="msg-body">
+      <div class="msg-role">${role==='user'?'You':'HepatoGuide'}</div>
+      <div class="msg-content">${fmt(text)}</div>
+    </div>`;
+  c.appendChild(el); c.scrollTop=c.scrollHeight; return el;
+}
+
+function addTyping() {
+  const c = document.getElementById('chat-messages');
+  const el = document.createElement('div');
+  el.className='message';
+  el.innerHTML=`<div class="msg-avatar bot">H</div><div class="msg-body"><div class="msg-role">HepatoGuide</div><div class="typing-indicator"><span></span><span></span><span></span></div></div>`;
+  c.appendChild(el); c.scrollTop=c.scrollHeight; return el;
+}
+
+function fmt(t) {
+  return t
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/`(.+?)`/g,'<code>$1</code>')
+    .replace(/^#{1,3} (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^[\*\-] (.+)$/gm,'<li>$1</li>')
+    .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>\n?)+/g, m=>`<ul>${m}</ul>`)
+    .replace(/\[Source:([^\]]+)\]/g,'<div class="citations-block"><div class="citations-label">Source</div><span class="source-tag">📋$1</span></div>')
+    .replace(/\n\n+/g,'</p><p>').replace(/\n/g,'<br>')
+    .replace(/^([^<])/,'<p>$1').replace(/([^>])$/,'$1</p>');
+}
+
+function showWarn(msg) {
+  document.getElementById('warning-text').textContent=msg;
+  const b=document.getElementById('warning-banner');
+  b.classList.remove('hidden');
+  setTimeout(()=>b.classList.add('hidden'),7000);
+}
+function fmtBytes(b) { return b<1024?b+'B':b<1048576?Math.round(b/1024)+'KB':(b/1048576).toFixed(1)+'MB'; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── Init ──
+const saved = getKey();
+if (saved) { document.getElementById('api-key-input').value=saved.slice(0,8)+'…'; setKeyStatus(true); document.getElementById('api-modal').classList.add('hidden'); }
+else setTimeout(()=>document.getElementById('api-modal').classList.remove('hidden'), 600);
+</script>
+</body>
+</html>
